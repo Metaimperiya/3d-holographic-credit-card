@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Holographic Credit Card</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Syne+Mono");
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --brand-grad: linear-gradient(110deg, oklch(58% 0.28 255) 0%, oklch(42% 0.34 295) 100%);
+      --card-w: 420px;
+      --card-h: 265px;
+      --card-radius: 16px;
+      --card-bg: oklch(18% 0.04 260 / 0.82);
+      --font-display: "Syne", sans-serif;
+      --font-mono: "Syne Mono", monospace;
+      --foil-opacity: 0.35;
+      --chip-angle: 145deg;
+      --chip-lift: 0;
+      --chip-sheen: 0;
+    }
+
+    body {
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      background: conic-gradient(
+          oklch(100% 0 0 / 0.1) 90deg,
+          transparent 90deg 180deg,
+          oklch(100% 0 0 / 0.1) 180deg 270deg,
+          transparent 270deg
+        ),
+        linear-gradient(110deg, oklch(58% 0.28 255) 0%, oklch(42% 0.34 295) 100%);
+      background-size: 40px 40px, 100% 100%;
+      font-family: var(--font-display);
+      overflow: hidden;
+      cursor: none;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      background-size: 200px 200px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .scene {
+      perspective: 1000px;
+      z-index: 1;
+    }
+
+    .card {
+      position: relative;
+      width: var(--card-w);
+      height: var(--card-h);
+      border-radius: var(--card-radius);
+      background: var(--card-bg);
+      margin: 6rem;
+      border: 1px solid oklch(100% 0 0 / 0.14);
+      backdrop-filter: blur(28px) saturate(1.6);
+      box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.1),
+        0 32px 64px oklch(0% 0 0 / 0.45), 0 0 0 1px oklch(0% 0 0 / 0.25);
+      transform-style: preserve-3d;
+      transform: rotateX(0deg) rotateY(0deg);
+      transition: box-shadow 0.07s linear;
+      overflow: hidden;
+      will-change: transform;
+    }
+
+    /* holographic foil */
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -30%;
+      background: conic-gradient(
+        from calc(var(--foil-angle, 0deg) * 1deg) at var(--foil-x, 50%) var(--foil-y, 50%),
+        oklch(64% 0.04 calc(var(--foil-h, 200) + 0)) 0deg,
+        oklch(66% 0.07 calc(var(--foil-h, 200) + 45)) 45deg,
+        oklch(62% 0.09 calc(var(--foil-h, 200) + 90)) 90deg,
+        oklch(65% 0.06 calc(var(--foil-h, 200) + 135)) 135deg,
+        oklch(67% 0.04 calc(var(--foil-h, 200) + 180)) 180deg,
+        oklch(63% 0.08 calc(var(--foil-h, 200) + 225)) 225deg,
+        oklch(66% 0.06 calc(var(--foil-h, 200) + 270)) 270deg,
+        oklch(62% 0.09 calc(var(--foil-h, 200) + 315)) 315deg,
+        oklch(64% 0.04 calc(var(--foil-h, 200) + 360)) 360deg
+      );
+      mix-blend-mode: screen;
+      opacity: var(--foil-opacity);
+      transition: opacity 0.1s ease;
+      pointer-events: none;
+    }
+
+    .card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background-image: radial-gradient(
+        circle at calc(var(--glint-x) / 3) calc(var(--glint-y) / 3),
+        oklch(93% 0.05 calc(var(--foil-h, 200) + 360) / 60%) 15%,
+        transparent 100%
+      );
+    }
+
+    .card__body {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+    }
+
+    .card__pattern {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background-image: radial-gradient(
+        circle at var(--glint-x) var(--glint-y),
+        oklch(100% 0 0 / 0.18) 2px,
+        transparent 2px
+      );
+      background-size: 18px 18px;
+      mask-image: radial-gradient(ellipse 65% 50% at 50% 50%, black 30%, transparent 100%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .card__bank {
+      position: absolute;
+      top: 20px;
+      left: 28px;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: oklch(100% 0 0 / 0.55);
+    }
+
+    .card__network {
+      position: absolute;
+      bottom: 18px;
+      right: 14px;
+      display: flex;
+      align-items: center;
+    }
+
+    .mc-left {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: oklch(52% 0.22 35);
+    }
+
+    .mc-right {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: oklch(70% 0.19 62);
+      margin-left: -11px;
+      mix-blend-mode: screen;
+    }
+
+    .card__chip {
+      position: absolute;
+      top: 100px;
+      left: 28px;
+      width: 42px;
+      height: 33px;
+      border-radius: 5px;
+      background: linear-gradient(
+        calc(var(--chip-angle, 145deg)),
+        oklch(from oklch(82% 0.09 88) calc(l + var(--chip-lift, 0)) c h) 0%,
+        oklch(70% 0.13 80) 35%,
+        oklch(78% 0.1 90) 60%,
+        oklch(from oklch(66% 0.11 76) calc(l - var(--chip-lift, 0)) c h) 100%
+      );
+      border: 1px solid oklch(55% 0.08 80 / 0.5);
+      box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.4),
+        inset 0 -1px 0 oklch(0% 0 0 / 0.2), 0 2px 6px oklch(0% 0 0 / 0.3);
+    }
+
+    .card__chip::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: radial-gradient(
+        ellipse 80% 60% at var(--chip-sheen-x, 30%) var(--chip-sheen-y, 25%),
+        oklch(96% 0.06 88 / var(--chip-sheen, 0)) 0%,
+        transparent 70%
+      );
+    }
+
+    .card__chip::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(oklch(50% 0.08 80 / 0.3) 0 0) center / 1px calc(100% - 8px) no-repeat,
+        linear-gradient(oklch(50% 0.08 80 / 0.3) 0 0) center / calc(100% - 8px) 1px no-repeat;
+    }
+
+    .card__number {
+      position: absolute;
+      bottom: 80px;
+      left: 28px;
+      right: 28px;
+      font-family: var(--font-mono);
+      font-size: 24px;
+      letter-spacing: 0.22em;
+    }
+
+    .card__number,
+    .card__expiry {
+      background: linear-gradient(
+        var(--chip-angle, 145deg),
+        oklch(100% 0 0) 0%,
+        oklch(98% 0 0) 10%,
+        oklch(90% 0 0) 20%,
+        oklch(100% 0 0) 35%,
+        oklch(88% 0 0) 50%,
+        oklch(100% 0 0) 65%,
+        oklch(93% 0 0) 80%,
+        oklch(100% 0 0) 100%
+      );
+      text-shadow: 0 -1px 0 oklch(100% 0 0 / 0.9), 0 1px 0 oklch(0% 0 0 / 0.85),
+        0 2px 6px oklch(0% 0 0 / 0.7), 0 8px 18px oklch(0% 0 0 / 0.5);
+      background-clip: text;
+      color: transparent;
+    }
+
+    .card__footer {
+      position: absolute;
+      bottom: 22px;
+      left: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .card__name {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: oklch(100% 0 0 / 0.88);
+    }
+
+    .card__expiry-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .card__label {
+      font-size: 8px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: oklch(100% 0 0 / 0.36);
+    }
+
+    .card__expiry {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      letter-spacing: 0.1em;
+    }
+
+    .hint {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      translate: -50% 0;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: oklch(100% 0 0 / 0.3);
+      font-family: var(--font-mono);
+      z-index: 10;
+    }
+
+    .cursor {
+      position: fixed;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      --cursor-base: oklch(68% 0.22 var(--foil-h, 200));
+      background: oklch(from var(--cursor-base) l calc(c * 1.5) h);
+      box-shadow: 0 0 10px 2px oklch(from var(--cursor-base) l calc(c * 1.4) h / 0.7);
+      pointer-events: none;
+      translate: -50% -50%;
+      z-index: 100;
+      transition: scale 0.12s ease, background 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .cursor.is-over {
+      scale: 2.5;
+      background: oklch(from var(--cursor-base) calc(l * 1.05) calc(c * 1.6) h);
+      box-shadow: 0 0 16px 4px oklch(from oklch(91% 0.1 calc(var(--foil-h, 200) + 90)) l calc(c * 1.4) h / 0.5);
+    }
+
+    @media (max-width: 600px) {
+      :root {
+        --card-w: 320px;
+        --card-h: 200px;
+      }
+      .card__bank { font-size: 11px; top: 14px; left: 18px; }
+      .card__chip { width: 34px; height: 26px; top: 72px; left: 18px; }
+      .card__number { font-size: 18px; bottom: 60px; left: 18px; right: 18px; letter-spacing: 0.15em; }
+      .card__footer { bottom: 16px; left: 18px; }
+      .card__name { font-size: 11px; }
+      .card__expiry { font-size: 12px; }
+      .card__network { bottom: 12px; right: 10px; }
+      .mc-left, .mc-right { width: 24px; height: 24px; }
+      .scene { perspective: 600px; }
+      .card { margin: 3rem; }
+      .hint { font-size: 8px; bottom: 16px; }
+    }
+
+    @media (max-width: 400px) {
+      :root {
+        --card-w: 280px;
+        --card-h: 175px;
+      }
+      .card__number { font-size: 15px; bottom: 52px; letter-spacing: 0.1em; }
+      .card__chip { width: 28px; height: 22px; top: 60px; left: 14px; }
+      .card__bank { font-size: 10px; top: 12px; left: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="scene">
+  <div class="card" id="card">
+    <div class="card__body">
+      <div class="card__pattern"></div>
+      <div class="card__bank">Bank of OKLAB</div>
+      <div class="card__network">
+        <div class="mc-left"></div>
+        <div class="mc-right"></div>
+      </div>
+      <div class="card__chip"></div>
+      <div class="card__number" id="cardNumber">5412 1234 5678 1337</div>
+      <div class="card__footer">
+        <div class="card__name">MIKE-AT-REDSPACE</div>
+        <div class="card__expiry-row">
+          <span class="card__label">Valid Thru</span>
+          <span class="card__expiry" id="cardExpiry">01/38</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="hint">Move cursor over card</div>
+<div class="cursor" id="cursor"></div>
+
+<script>
+  const RESET_STYLES = {
+    transform: "rotateX(0deg) rotateY(0deg)",
+    "--foil-opacity": 0.35,
+    "--chip-angle": "145deg",
+    "--chip-lift": 0,
+    "--chip-sheen": 0
+  };
+
+  const CONFIG = { maxTilt: 30, foilBaseHue: 200, hueRange: 180 };
+
+  const elements = {
+    scene: document.querySelector(".scene"),
+    card: document.getElementById("card"),
+    cursor: document.getElementById("cursor"),
+    cardNumber: document.getElementById("cardNumber"),
+    cardExpiry: document.getElementById("cardExpiry")
+  };
+
+  const { scene, card, cursor, cardNumber, cardExpiry } = elements;
+
+  let bounds = scene.getBoundingClientRect();
+  let rafId = null;
+
+  const state = { x: 0, y: 0, nx: 0, ny: 0, isOver: false };
+  const target = { nx: 0, ny: 0 };
+
+  const LERP = 0.14;
+
+  const setStyles = (element, styles) => {
+    if (!element) return;
+    Object.entries(styles).forEach(([key, value]) => {
+      key.startsWith("--")
+        ? element.style.setProperty(key, value)
+        : (element.style[key] = value);
+    });
+  };
+
+  const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
+
+  const damp = (c, t) => c + (t - c) * LERP;
+
+  const calculateTextShadow = (nx, ny) => {
+    const sdx = clamp(-nx * 1.2, -1.5, 1.5).toFixed(1);
+    const sdy = clamp(-ny * 1.2, -1.5, 1.5).toFixed(1);
+    return `${sdx}px ${sdy}px 1px oklch(0% 0 0 / 0.25)`;
+  };
+
+  const calculateHoverStyles = ({ nx, ny }, config) => {
+    const { maxTilt, foilBaseHue, hueRange } = config;
+
+    const rotX = -ny * maxTilt;
+    const rotY = nx * maxTilt;
+    const dist = Math.hypot(nx, ny);
+    const angle = Math.atan2(ny, nx) * (180 / Math.PI);
+    const px = (nx + 1) * 50;
+    const py = (ny + 1) * 50;
+
+    return {
+      transform: `rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg)`,
+      "--foil-h": (foilBaseHue + nx * hueRange).toFixed(1),
+      "--foil-angle": angle.toFixed(1),
+      "--foil-x": `${px.toFixed(1)}%`,
+      "--foil-y": `${py.toFixed(1)}%`,
+      "--foil-opacity": Math.min(0.1 + dist * 0.3, 0.65).toFixed(2),
+      "--glint-x": `${px.toFixed(2)}%`,
+      "--glint-y": `${py.toFixed(2)}%`,
+      "--chip-angle": `${(angle + 90).toFixed(1)}deg`,
+      "--chip-lift": (Math.abs(nx) * 0.08).toFixed(3),
+      "--chip-sheen-x": `${(50 + nx * 55).toFixed(1)}%`,
+      "--chip-sheen-y": `${(50 + ny * 55).toFixed(1)}%`,
+      "--chip-sheen": (0.15 + dist * 0.45).toFixed(2)
+    };
+  };
+
+  const updateBounds = () => (bounds = scene.getBoundingClientRect());
+
+  const handleMouseMove = ({ clientX, clientY }) => {
+    state.x = clientX;
+    state.y = clientY;
+
+    if (state.isOver) {
+      target.nx = ((clientX - bounds.left) / bounds.width) * 2 - 1;
+      target.ny = ((clientY - bounds.top) / bounds.height) * 2 - 1;
+    }
+  };
+
+  const handleMouseEnter = () => {
+    updateBounds();
+    state.isOver = true;
+    cursor.classList.add("is-over");
+  };
+
+  const handleMouseLeave = () => {
+    state.isOver = false;
+    target.nx = 0;
+    target.ny = 0;
+    cursor.classList.remove("is-over");
+  };
+
+  setStyles(card, calculateHoverStyles(state, CONFIG));
+
+  const tick = () => {
+    state.nx = damp(state.nx, target.nx);
+    state.ny = damp(state.ny, target.ny);
+
+    setStyles(cursor, { left: `${state.x}px`, top: `${state.y}px` });
+
+    const styles = calculateHoverStyles(state, CONFIG);
+    setStyles(card, styles);
+
+    const shadow = calculateTextShadow(state.nx, state.ny);
+    [cardNumber, cardExpiry].forEach((el) =>
+      setStyles(el, { textShadow: shadow })
+    );
+
+    rafId = requestAnimationFrame(tick);
+  };
+
+  window.addEventListener("resize", updateBounds);
+  document.addEventListener("mousemove", handleMouseMove);
+  scene.addEventListener("mouseenter", handleMouseEnter);
+  scene.addEventListener("mouseleave", handleMouseLeave);
+
+  rafId = requestAnimationFrame(tick);
+
+  console.log('💳 3D Holographic Card | Move mouse over the card');
+</script>
+
+</body>
+</html>
